@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+  	<head>
+	    <meta charset="UTF-8">
+	    <meta name="viewport" content="initial-scale=1, width=device-width, maximum-scale=1, minimum-scale=1, user-scalable=no">
+	    <title>gale</title>
+	    <link type="text/css" rel="stylesheet" href="./style.css" />
+  	</head>
+  	<script>
+	window.eval = global.eval = function() {
+		throw new Error("Sorry, eval() is not supported.");
+	}
+  	</script>
+	<body>
+	    <header class="windowframe" id="windowframe">
+	    	<!-- <span class="icon"><i class="mdi mdi-menu"></i></span> -->
+	    	<span class="title">gale</span>
+		    <button class="btn-devtools" title="Open DevTools"><i class="mdi mdi-bug"></i></button>
+		    <button class="btn-min" title="Minimize"><i class="mdi mdi-window-minimize"></i></button>
+		    <button class="btn-max" title="Restore Down"><i class="mdi mdi-window-maximize"></i></button>
+		    <button class="btn-close" title="Close"><i class="mdi mdi-close"></i></button>
+	    </header>
+	    <main class="viewport" id="root">
+
+		</main>
+  	</body>
+  	<!-- <script type="text/javascript" src="./bundle.js"></script> -->
+  	<script type="text/javascript">
+    require('./bundle.js');
+  	</script>
+</html>
