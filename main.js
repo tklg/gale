@@ -14,11 +14,11 @@ function createMainWindow () {
   // Create the browser window.
 	var small = [300, 150],
 	    medium = [300, 450],
-	    large = [900, 450];
+	    large = [900, 750];
     var mainWindow = wm.createWindow('MAIN', {
 	    width: large[0],
 	    height: large[1],
-	    // frame: false,
+	    frame: false,
 	    alwaysOnTop: false,
 	    autoHideMenuBar: true,
 	    resizable: true,
@@ -28,7 +28,6 @@ function createMainWindow () {
 
     // and load the index.html of the app.
     mainWindow.loadURL(`file://${__dirname}/public/built/index.html`);
-	require('electron-react-devtools').inject();
 
 
   // Emitted when the window is closed.

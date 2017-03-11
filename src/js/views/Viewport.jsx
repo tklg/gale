@@ -1,15 +1,18 @@
 import React from 'react';
-import ReactDOM from 'react-dom';
 
 import LeftNav from '../views/LeftNav.jsx';
 import Gallery from '../views/Gallery.jsx';
+import WindowFrame from '../components/WindowFrame.jsx';
 
 export default class Viewport extends React.Component {
 	render() {
 		return (
-			<div className="viewport">
-				<LeftNav />
-				<Gallery />
+			<div>
+				<WindowFrame window={this.props.window} />
+				<main className="viewport">
+					<LeftNav />
+					<Gallery />
+				</main>
 			</div>
 		);
 	}

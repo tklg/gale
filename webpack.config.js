@@ -22,8 +22,9 @@ module.exports = {
 		   //{ test: /\.less$/, loader: 'style-loader!css-loader!less-loader'}
 	 	]
 	},
+    target: "electron",
     plugins: [
         new webpack.HotModuleReplacementPlugin(),
-        new webpack.IgnorePlugin(new RegExp("^(fs|ipc)$"))
+        //new webpack.IgnorePlugin(new RegExp("^(fs|ipc)$"))
     ]
 }
