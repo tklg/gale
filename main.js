@@ -1,4 +1,7 @@
 const electron = require('electron');
+const Datastore = require('nedb');
+const fs = require('fs');
+const mkdirp = require('mkdirp');
 // Module to control application life.
 const app = electron.app;
 const ipc = electron.ipcMain;
@@ -22,8 +25,8 @@ function createMainWindow () {
 	    alwaysOnTop: false,
 	    autoHideMenuBar: true,
 	    resizable: true,
-	    minWidth: 300,
-	    minHeight: 150
+	    minWidth: 500,
+	    useContentSize: true
     });
 
     // and load the index.html of the app.
@@ -64,10 +67,6 @@ app.on('activate', function () {
 // In this file you can include the rest of your app's specific main process
 // code. You can also put them in separate files and require them here.
 
-ipc.on('background', (event, opts) => {
-	//console.log(opts);
-	event.sender.send('background', 'hello from background');
-});
 
 function WindowManager() {
 	var windows = [];
@@ -99,3 +98,123 @@ function Window(name, opts) {
 	this.name = name;
 	this.win = new BrowserWindow(opts);
 }
+
+const db = {
+	files: new Datastore({
+		filename: app.getPath('pictures') + '/.gale_storage/db/files.db',
+		autoload: true
+	}),
+	tags: new Datastore({
+		filename: app.getPath('pictures') + '/.gale_storage/db/tags.db',
+		autoload: true
+	}),
+	folders: new Datastore({
+		filename: app.getPath('pictures') + '/.gale_storage/db/folders.db',
+		autoload: true
+	})
+}
+
+ipc.on('handshake', (event, opts) => {
+	event.sender.send('handshake', 'hello from background');
+});
+ipc.on('db.files.insert', (e, data) => {
+	console.log('db.files.insert:');
+	var doc = data.data;
+	var _nonce = data._nonce;
+	db.files.insert(doc, function(err, newDoc) {
+		e.sender.send('result', {
+			_nonce: _nonce,
+			data: newDoc
+		});
+	});
+});
+ipc.on('db.files.find', (e, data) => {
+	console.log('db.files.find:');
+	var doc = data.data;
+	var _nonce = data._nonce;
+	db.files.find(doc).sort({date: 1}).skip(data.offset || 0).limit(data.limit || 50).exec(function(err, docs) {
+		e.sender.send('result', {
+			_nonce: _nonce,
+			data: docs
+		});
+	});
+});
+ipc.on('db.files.update', (e, data) => {
+	console.log('db.files.update:');
+	var doc = data.data[0];
+	var newDoc = data.data[1];
+	var picsDir = app.getPath('pictures').replace(/\\/g, '/') + '/.gale_storage'; // ?????
+	console.log(doc);
+	console.log(picsDir);
+	console.log(newDoc);
+	if (newDoc['$set']) newDoc['$set'].src = picsDir + "/" + newDoc['$set'].src;
+	console.log(newDoc);
+	var opts = data.data[2] || {};
+	var _nonce = data._nonce;
+	db.files.update(doc, newDoc, opts, function(err, num) {
+		e.sender.send('result', {
+			_nonce: _nonce,
+			data: num
+		});
+	});
+});
+ipc.on('db.folders.insert', (e, data) => {
+	console.log('db.folders.insert:');
+	var doc = data.data;
+	var _nonce = data._nonce;
+	db.folders.insert(doc, function(err, newDoc) {
+		e.sender.send('result', {
+			_nonce: _nonce,
+			data: newDoc
+		});
+	});
+});
+ipc.on('db.folders.find', (e, data) => {
+	console.log('db.folders.find:');
+	var doc = data.data;
+	var _nonce = data._nonce;
+	db.folders.find(doc).sort({title: 1}).skip(data.offset || 0).limit(data.limit || 50).exec(function(err, docs) {
+		e.sender.send('result', {
+			_nonce: _nonce,
+			data: docs
+		});
+	});
+});
+ipc.on('files.push', (e, data) => {
+	var src = data.data.src;
+	var picsDir = app.getPath('pictures').replace(/\\/g, '/') + '/.gale_storage';
+	var path = picsDir + "/" + data.data.path;
+	var dirPath = path.substring(0, path.lastIndexOf('/'));
+	var _nonce = data._nonce;
+	var cbc = false;
+	mkdirp(dirPath, function(err) {
+		var rd = fs.createReadStream(src);
+		rd.on('error', err => {
+			resp(err, true)
+		});
+		var wr = fs.createWriteStream(path);
+		wr.on('error', err => {
+			resp(err, true);
+		})
+		wr.on('close', m => {
+			resp(path, false);
+		});
+		rd.pipe(wr);
+	})
+	function resp(err, isErr) {
+		if (!cbc) {
+			if (isErr) {
+				e.sender.send('result', {
+					_nonce: _nonce,
+					error: err
+				});
+			} else {
+				e.sender.send('result', {
+					_nonce: _nonce,
+					data: err
+				});
+			}
+			cbc = true;
+		}
+	}
+});

@@ -21,7 +21,7 @@ gulp.task('js', function() {
                 src: '.js',
                 min: '.min.js'
             },
-            //noSource: true
+            //noSource: true,
             mangleNames: false
             }))
         .pipe(gulp.dest('public/built/'))

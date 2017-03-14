@@ -1,45 +1,51 @@
 import React from 'react';
-import ReactDOM from 'react-dom';
 
+import Infinite from 'react-infinite';
 import ListItem from '../components/ListItem.jsx';
 
 export default class LeftNav extends React.Component {
 	constructor() {
 		super();
 		this.state = {
-			folders: [
-				{
-					'onClick': "",
-					'folderName': "test"
-				},
-				{
-					'onClick': "",
-					'folderName': "test"
-				},
-				{
-					'onClick': "",
-					'folderName': "test"
-				},
-				{
-					'onClick': "",
-					'folderName': "test"
-				}
-			]
+			height: window.innerHeight - 160
 		}
+		this.updateWindowDimensions = this.updateWindowDimensions.bind(this);
 	}
-	loadContent() {
-
+	componentDidMount() {
+		this.updateWindowDimensions();
+		window.addEventListener('resize', this.updateWindowDimensions.bind(this));
+	}
+	componentWillUnmount() {
+		window.removeEventListener('resize', this.updateWindowDimensions.bind(this));
+	}
+	updateWindowDimensions() {
+		this.setState({
+			height: this.refs.container.offsetHeight || window.innerHeight - 160,
+		});
 	}
 	render() {
 		return (
 			<nav className="nav-v">
-				<ul className="folders-nav">
+				<header>
+					<h1>{this.props.header} <span className="desc">{this.props.items.length}</span></h1>
+				</header>
+				<Infinite className="list folders-nav"
+						  containerHeight={this.state.height}
+						  elementHeight={40}
+						  ref="container">
 					{
-						this.state.folders.map((x, i) => {
-							return <ListItem key={i} onClick={x.onClick}>{x.folderName+' '+i}</ListItem>
+						this.props.items.map((x, i) => {
+							return <ListItem key={i} onClick={() => this.props.onItemClick(i, x._id)}>{x.title}</ListItem>
 						})
 					}
-				</ul>
+				</Infinite>
+				<footer>
+					{
+						this.props.footers.map((x, i) => {
+							return <button key={i} className="btn btn-stacked" onClick={x.onClick}>{x.content}</button>
+						})
+					}
+				</footer>
 			</nav>
 		);
 	}
