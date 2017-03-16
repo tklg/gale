@@ -18,35 +18,23 @@ export default class Viewport extends React.Component {
 	constructor() {
 		super();
 		this.state = {
-			lightboxItem: null,
+			viewMode: 'grid', // row
+			lightboxIndex: null,
 			creatorItem: [],
+			creatorAction: 'new',
 			modalContent: null,
-			modalValue: 'test',
+			modalValue: '',
 			files: [],
-			activeFolder: -1,
-			activeFolderID: '',
+			activeFolder: 0, // -1
+			activeFolderID: '', // ALL
 			folders: [],
+			tags: [],
 			itemsPerPage: 40,
-			currentOffset: 0
+			currentOffset: 0,
+			isUploading: null
 		}
 	}
 	componentDidMount() {
-		/*ajax({
-			channel: 'db.files.find',
-			data: {},
-			offset: 0,
-			limit: this.state.itemsPerPage,
-			success: function(data) {
-				this.setState({
-					files: data,
-					currentOffset: this.state.currentOffset + this.state.itemsPerPage
-				});
-			}.bind(this),
-			error: function(data) {
-				console.error(data)
-			}.bind(this)
-		});*/
-		this.openFolder(-1);
 		ajax({
 			channel: 'db.folders.find',
 			data: {},
@@ -55,8 +43,24 @@ export default class Viewport extends React.Component {
 			success: function(data) {
 				this.setState({
 					folders: data,
-					activeFolderID: data[0]._id,
-					activeFolder: 0
+					activeFolder: 0,
+					activeFolderID: data[0]._id
+				}, () => {
+					this.openFolder(0, data[0]._id);
+				});
+			}.bind(this),
+			error: function(data) {
+				console.error(data)
+			}.bind(this)
+		});
+		ajax({
+			channel: 'db.tags.find',
+			data: {},
+			offset: 0,
+			limit: 0,
+			success: function(data) {
+				this.setState({
+					tags: data
 				});
 			}.bind(this),
 			error: function(data) {
@@ -64,19 +68,29 @@ export default class Viewport extends React.Component {
 			}.bind(this)
 		});
 	}
-	openLightbox(item) {
+	openLightbox(index) {
 		this.setState({
-			lightboxItem: item
+			lightboxIndex: index
 		})
 	}
 	closeLightbox() {
 		this.setState({
-			lightboxItem: null
+			lightboxIndex: null
 		})
 	}
-	openCreator(item) {
+	changeLightboxPage(dir) {
+		var nd = this.state.lightboxIndex + dir;
+		if (nd > this.state.files.length - 1) nd = 0;
+		else if (nd < 0) nd = this.state.files.length - 1;
 		this.setState({
-			creatorItem: item
+			lightboxIndex: nd
+		});
+	}
+	openCreator(item, update) {
+		console.log(item);
+		this.setState({
+			creatorItem: item,
+			creatorAction: update ? 'edit' : 'new'
 		})
 	}
 	closeCreator() {
@@ -131,34 +145,43 @@ export default class Viewport extends React.Component {
 		this.closeFolderModal();
 	}
 	openFolder(index, id, cb) {
+		var changed = false;
+		console.log("opening folder: " + (index == null ? this.state.activeFolder : index) + " " + (id || this.state.activeFolderID));
+		if (index != this.state.activeFolder) changed = true;
 		var cur = this.state.files;
-		if (index != null && !!id) {
+		if (index == -1 || (index != null && !!id)) {
 			cur = [];
 			this.setState({
 				currentOffset: 0
 			})
 		}
 		this.setState({
-			activeFolder: index || this.state.activeFolder,
+			activeFolder: (index == null ? this.state.activeFolder : index),
 			activeFolderID: id || this.state.activeFolderID
 		}, () => {
 			var data = {
 				parent: id || this.state.activeFolderID
 			};
-			if (index == -1) data = {};
+			if (this.state.activeFolder == -1) data = {};
 			ajax({
 				channel: 'db.files.find',
 				data: data,
 				offset: this.state.currentOffset,
 				limit: this.state.itemsPerPage,
 				success: function(data) {
-					cur = cur.concat(data);
-					this.setState({
-						files: cur,
-						currentOffset: this.state.currentOffset + this.state.itemsPerPage
-					}, () => {
+					if (data.length || changed) {
+						cur = cur.concat(data);
+						var newOffset = this.state.currentOffset + data.length
+						this.setState({
+							files: cur,
+							currentOffset: newOffset
+						}, () => {
+							if (cb) cb();
+						});
+					} else {
+						console.log("no new files");
 						if (cb) cb();
-					});
+					}
 				}.bind(this),
 				error: function(data) {
 					console.error(data)
@@ -193,67 +216,137 @@ export default class Viewport extends React.Component {
 			creatorItem: cur
 		});
 	}
-	uploadFile(file) {
-		console.log(file);
-		var rem = this.state.creatorItem;
-		rem.shift();
-		if (rem.length === 0) {
-			this.closeCreator();
-		}
-		this.setState({
-			creatorItem: rem
-		})
-		var f = {
-			title: file.title,
-			star: false,
-			tags: file.tags.map(x => this.state.tags[x]),
-			parent: this.state.activeFolderID,
-			src: this.state.activeFolderID,
-			date: Date.now()
-		}
-		var ext = file.localSrc.substr(file.localSrc.lastIndexOf('.') + 1);
+	addTag(tag, cb) {
+		var tags = this.state.tags;
 		ajax({
-			channel: 'db.files.insert',
-			data: f,
+			channel: 'db.tags.insert',
+			data: {
+				title: tag,
+				folder: this.state.activeFolderID
+			},
 			success: function(data) {
-				var id = data._id;
-				ajax({
-					channel: 'db.files.update',
-					data: [
-						{_id: id},
-						{
-							$set: {src: f.src + '/' + id + '.' + ext}
-						}
-					],
-					success: function(data) {
-						console.log('new src: ' + f.src + '/' + id + '.' + ext);
-						ajax({
-							channel: 'files.push',
-							data: {
-								src: file.localSrc,
-								path: f.src + '/' + id + '.' + ext
-							},
-							success: function(data) {
-								// nesting
-								if (rem.length === 0) {
-									this.openFolder();
-								}
-
-							}.bind(this),
-							error: function(data) {
-								console.error(data)
-							}.bind(this)
-						});
-					}.bind(this),
-					error: function(data) {
-						console.error(data)
-					}.bind(this)
-				});
+				tags.push(data);
+				this.setState({
+					tags: tags
+				}, () => {
+					if (cb) cb();
+				})
 			}.bind(this),
 			error: function(data) {
 				console.error(data)
 			}.bind(this)
-		});
+		})
+	}
+	tagExists(tag) {
+		for (var i = 0; i < this.state.tags.length; i++) {
+			if (this.state.tags[i].title == tag) return true;
+		}
+		return false;
+	}
+	uploadFile(file) {
+		console.log(file);
+		var rem = this.state.creatorItem;
+		rem.shift();
+		this.setState({
+			isUploading: true
+		})
+		file.tags.forEach(tag => {
+			if (!this.tagExists(tag)) this.addTag(tag);
+		})
+		if (this.state.creatorAction == 'new') {
+			var f = {
+				title: file.title,
+				star: false,
+				tags: file.tags,
+				parent: this.state.activeFolderID,
+				src: this.state.activeFolderID,
+				thumb: this.state.activeFolderID,
+				date: Date.now()
+			}
+			var ext = file.localSrc.substr(file.localSrc.lastIndexOf('.') + 1);
+			ajax({
+				channel: 'db.files.insert',
+				data: f,
+				success: function(data) {
+					var id = data._id;
+					ajax({
+						channel: 'db.files.update',
+						data: [
+							{_id: id},
+							{
+								$set: {
+									src: f.src + '/' + id + '.' + ext,
+									thumb: f.src + '/' + id + '_thumb.' + ext,
+								}
+							}
+						],
+						success: function(data) {
+							console.log('new src: ' + f.src + '/' + id + '.' + ext);
+							ajax({
+								channel: 'files.push',
+								data: {
+									src: file.localSrc,
+									path: f.src + '/' + id + '.' + ext
+								},
+								success: function(data) {
+									// nesting
+									if (rem.length === 0) {
+										this.closeCreator();
+										this.openFolder();
+									}
+									this.setState({
+										creatorItem: rem,
+										isUploading: null
+									})
+									console.log("done");
+								}.bind(this),
+								error: function(data) {
+									console.error(data)
+								}.bind(this)
+							});
+						}.bind(this),
+						error: function(data) {
+							console.error(data)
+						}.bind(this)
+					});
+				}.bind(this),
+				error: function(data) {
+					console.error(data)
+				}.bind(this)
+			});
+		} else {
+			// update
+			ajax({
+				channel: 'db.files.update',
+				data: [
+					{_id: file.id},
+					{
+						$set: {
+							title: file.title,
+							tags: file.tags
+						}
+					}
+				],
+				success: function(data) {
+					var rem = this.state.creatorItem;
+					rem.shift();
+					if (rem.length === 0) {
+						this.closeCreator();
+						this.openFolder(this.state.activeFolder, this.state.activeFolderID);
+					}
+					this.setState({
+						creatorItem: rem,
+						isUploading: null,
+						creatorAction: 'new'
+					})
+					console.log("done");
+				}.bind(this),
+				error: function(data) {
+					console.error(data)
+				}.bind(this)
+			});
+
+		}
 	}
 	render() {
 		var footerButtons = [
@@ -272,19 +365,31 @@ export default class Viewport extends React.Component {
 		];
 		return (
 			<div>
-				<WindowFrame window={this.props.window} title={(this.state.folders[this.state.activeFolder] || {}).title || 'Gale'} />
+				<WindowFrame window={this.props.window} title={(this.state.activeFolder == -1 ? 'Gale' : (this.state.folders[this.state.activeFolder] || {}).title || 'Gale')} />
 				<main className="viewport">
 					<Dragover />
 					<Modal content={this.state.modalContent} close={this.closeFolderModal.bind(this)} />
-					<Lightbox item={this.state.lightboxItem} close={this.closeLightbox.bind(this)} />
-					{!!this.state.creatorItem.length && <Creator items={this.state.creatorItem} 
+					<Lightbox index={this.state.lightboxIndex}
+							  items={this.state.files}
+							  close={this.closeLightbox.bind(this)}
+							  editFile={this.openCreator.bind(this)}
+							  deleteFile={null}
+							  pageLeft={() => this.changeLightboxPage.bind(this)(-1)}
+							  pageRight={() => this.changeLightboxPage.bind(this)(1)} />
+					{(!!this.state.creatorItem.length ||
+					 !!this.state.isUploading) &&
+					 <Creator items={this.state.creatorItem} 
 							 close={this.closeCreator.bind(this)}
 							 onFooterClick={() => this.openFileDialog.bind(this)(false)}
-							 submit={this.uploadFile.bind(this)} />}
+							 submit={this.uploadFile.bind(this)}
+							 isUploading={this.state.isUploading} 
+							 tags={this.state.tags}
+							 action={this.state.creatorAction} />}
 					<LeftNav header="Folders" footers={footerButtons} items={this.state.folders} onItemClick={this.openFolder.bind(this)} />
 					<Gallery files={this.state.files}
 							 onItemClick={this.openLightbox.bind(this)}
-							 loadMoreContent={this.openFolder.bind(this)} />
+							 loadMoreContent={this.openFolder.bind(this)}
+							 viewMode={this.state.viewMode} />
 				</main>
 			</div>
 		);

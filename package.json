@@ -32,6 +32,7 @@
     "webpack-stream": "^3.2.0"
   },
   "dependencies": {
+    "clevernails": "^1.0.0",
     "mkdirp": "^0.5.1",
     "nedb": "^1.8.0",
     "nonce": "^1.0.4",

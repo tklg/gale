@@ -13,6 +13,7 @@ $font-size-title: 1.2rem;
 $background-menu: #35353f;
 $background-light: #1a1a1d;
 $background-dark: #0f0f12;
+$background-modal: rgba(0,0,0,.85);
 
 $accent-1: #84FFFF;
 $accent-2: #18FFFF;
@@ -372,7 +373,7 @@ body * {
 	position: absolute;
 	height: calc(100% - 20px);
 	width: calc(100% - 20px);
-	background: rgba(0,0,0,.85);
+	background: $background-modal;
 	padding: 10px;
 	@include flex-center();
     pointer-events: none;
@@ -380,7 +381,7 @@ body * {
 	user-select: none;
 	transition: opacity .35s $transition-smooth;
 
-    nav {
+    nav.header {
     	position: absolute;
     	top: 10px;
     	height: 30px;
@@ -409,6 +410,16 @@ body * {
 			flex: none
 		}
     }
+    #btn-page-left {
+    	position: absolute;
+    	top: calc(50% - 15px);
+    	left: 15px;
+    }
+    #btn-page-right {
+    	position: absolute;
+    	top: calc(50% - 15px);
+    	right: 15px;
+    }
 	img {
 		display: inline;
 		max-width: calc(100% - 40px);
@@ -430,7 +441,7 @@ body * {
 	position: absolute;
 	height: calc(100% - 20px);
 	width: calc(100% - 20px);
-	background: rgba(0,0,0,.85);
+	background: $background-modal;
 	padding: 10px;
 	@include flex-center();
     pointer-events: none;
@@ -520,8 +531,8 @@ body * {
 			position: absolute;
 			height: 30px;
 			line-height: 30px;
-			width: 100%;
-			padding: 0 5px;
+			width: calc(100% - 10px);
+			margin: 0 5px;
 			bottom: 0;
 			right: 0;
 			text-align: right;
@@ -538,7 +549,7 @@ body * {
 	.gallery-panel.placeholder {
 		opacity: 0;
 	}
-	.bar {
+	.row {
 		height: 200px;
 		width: calc(100% - 20px);
 		position: relative;
@@ -680,10 +691,32 @@ input.input-plain:focus {
 	display: none;
 
 	.editor {
-		flex: 1;
+		position: relative;
 		display: flex;
 		flex-direction: column;
+		flex: 1;
 
+		.uploading {
+			z-index: 9998;
+			position: absolute;
+			top: 0;
+			left: 0;
+			height: 100%;
+			width: 100%;
+			background: $background-modal;
+			display: none;
+		}
+		.uploading[data-active] {
+			display: inline-block;
+		}
+		.uploading:before {
+			position: absolute;
+			content: 'Uploading...';
+			color: white;
+			font-size: 26px;
+			top: calc(50% - 15px);
+			left: calc(50% - 71px);
+		}
 		.preview {
 			flex: 1;
 			@include flex-center();
@@ -704,7 +737,7 @@ input.input-plain:focus {
 		}
 		.controls {
 			background: $background-light;
-			// height: 200px;
+			position: relative;
 			border-top: 1px solid $white-05;
 
 			.input-row {

@@ -6,7 +6,6 @@ export default class Gallery extends React.Component {
 	constructor() {
 		super();
 		this.state = {
-			viewMode: 'grid',
 			offset: 0,
 			width: window.innerWidth - 260,
 			height: window.innerHeight - 50,
@@ -28,7 +27,7 @@ export default class Gallery extends React.Component {
 			height: this.refs.container.offsetHeight || window.innerHeight - 50,
 		});
 		this.setState({
-			itemsPerPage: (this.state.width * this.state.height) / (250 * (this.state.viewMode == 'grid' ? 220 : this.state.width))
+			itemsPerPage: (this.state.width * this.state.height) / (250 * (this.props.viewMode == 'grid' ? 220 : this.state.width))
 		});
 	}
 	loadMoreContent() {
@@ -49,14 +48,13 @@ export default class Gallery extends React.Component {
 	getSpinner() {
 		return <div className="spinner" />
 	}
-	getSplitItems() {
+	getSplitItems(itemsPerRow) {
 		var splitItems = [];
 		if (this.props.files.length) {
-			var itemsPerRow = Math.floor(this.state.width / 220) || 1;
 			for (var i = 0; i < this.props.files.length; i += itemsPerRow) {
 				splitItems.push(this.props.files.slice(i, i + itemsPerRow));
 			}
-			if (splitItems[splitItems.length - 1].length != itemsPerRow && this.state.viewMode == 'grid') {
+			if (splitItems[splitItems.length - 1].length != itemsPerRow && this.props.viewMode == 'grid') {
 				var l = splitItems[splitItems.length - 1].length;
 				for (var j = 0; j < itemsPerRow - l; j++) {
 					splitItems[splitItems.length - 1].push({placeholder:true});
@@ -66,24 +64,27 @@ export default class Gallery extends React.Component {
 		return splitItems;
 	}
 	render() {
-		var splitItems = this.getSplitItems.bind(this)();
+		var itemsPerRow = Math.floor(this.state.width / 220) || 1;
+		var splitItems = this.getSplitItems.bind(this)(itemsPerRow);
+		var elemHeight = this.props.viewMode == 'grid' ? 250 : 210;
 		var infiniteLoadBeginEdgeOffset = 0;
-		if (this.state.viewMode == 'grid') {
+		if (this.props.viewMode == 'grid') {
+			// preloadAdditionalHeight={Infinite.containerHeightScaleFactor(2)}
 			return (
-				<Infinite containerHeight={this.state.height} elementHeight={250} className="gallery" ref="container"
+				<Infinite containerHeight={this.state.height} elementHeight={elemHeight} className="gallery" ref="container"
 						  infiniteLoadBeginEdgeOffset={infiniteLoadBeginEdgeOffset}
 						  onInfiniteLoad={this.loadMoreContent.bind(this)}
 						  loadingSpinnerDelegate={this.getSpinner()}
-						  preloadAdditionalHeight={Infinite.containerHeightScaleFactor(2)}
+						  
 						  isInfiniteLoading={this.state.isInfiniteLoading} >
 					{
 						splitItems.map((x, i) => {
 							return (
-								<div key={i} className={"gallery-row "+this.state.viewMode} >
+								<div key={i} className={"gallery-row "+this.props.viewMode} >
 									{
 										x.map((y, j) => {
-											if (y.placeholder) return <GalleryPanel key={i + j} viewMode={this.state.viewMode} isPlaceholder />
-											return <GalleryPanel key={i + j} onClick={() => this.props.onItemClick(y)} flexMode={x.length} title={y.title} tags={y.tags}>{y.src}</GalleryPanel>
+											if (y.placeholder) return <GalleryPanel key={i * itemsPerRow + j} viewMode={this.props.viewMode} isPlaceholder />
+											return <GalleryPanel key={i * itemsPerRow + j} onClick={() => this.props.onItemClick(i * itemsPerRow + j)} flexMode={x.length} title={y.title} tags={y.tags}>{y.thumb}</GalleryPanel>
 										})
 									}
 								</div>
@@ -94,14 +95,14 @@ export default class Gallery extends React.Component {
 			);
 		} else {
 			return (
-				<Infinite containerHeight={this.state.height} elementHeight={250} className="gallery" ref="container"
+				<Infinite containerHeight={this.state.height} elementHeight={elemHeight} className="gallery" ref="container"
 						  infiniteLoadBeginEdgeOffset={infiniteLoadBeginEdgeOffset}
 						  onInfiniteLoad={this.loadMoreContent.bind(this)}
 						  loadingSpinnerDelegate={this.getSpinner()}
-						  preloadAdditionalHeight={Infinite.containerHeightScaleFactor(2)}
+						  
 						  isInfiniteLoading={this.state.isInfiniteLoading} >
 					{
-						this.props.files.map((x, i) => <div className={"gallery-row "+this.state.viewMode}><GalleryPanel key={i} onClick={() => this.props.onItemClick(x)} flexMode="no-flex" title={x.title} tags={x.tags}>{x.src}</GalleryPanel></div>)
+						this.props.files.map((x, i) => <div key={i} className={"gallery-row "+this.props.viewMode}><GalleryPanel onClick={() => this.props.onItemClick(i)} flexMode="no-flex" title={x.title} tags={x.tags}>{x.thumb}</GalleryPanel></div>)
 					}
 				</Infinite>
 			);

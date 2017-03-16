@@ -2,6 +2,7 @@ const electron = require('electron');
 const Datastore = require('nedb');
 const fs = require('fs');
 const mkdirp = require('mkdirp');
+const clevernails = require('clevernails');
 // Module to control application life.
 const app = electron.app;
 const ipc = electron.ipcMain;
@@ -118,7 +119,7 @@ ipc.on('handshake', (event, opts) => {
 	event.sender.send('handshake', 'hello from background');
 });
 ipc.on('db.files.insert', (e, data) => {
-	console.log('db.files.insert:');
+	console.log('db.files.insert');
 	var doc = data.data;
 	var _nonce = data._nonce;
 	db.files.insert(doc, function(err, newDoc) {
@@ -129,7 +130,7 @@ ipc.on('db.files.insert', (e, data) => {
 	});
 });
 ipc.on('db.files.find', (e, data) => {
-	console.log('db.files.find:');
+	console.log('db.files.find');
 	var doc = data.data;
 	var _nonce = data._nonce;
 	db.files.find(doc).sort({date: 1}).skip(data.offset || 0).limit(data.limit || 50).exec(function(err, docs) {
@@ -140,15 +141,14 @@ ipc.on('db.files.find', (e, data) => {
 	});
 });
 ipc.on('db.files.update', (e, data) => {
-	console.log('db.files.update:');
+	console.log('db.files.update');
 	var doc = data.data[0];
 	var newDoc = data.data[1];
 	var picsDir = app.getPath('pictures').replace(/\\/g, '/') + '/.gale_storage'; // ?????
-	console.log(doc);
-	console.log(picsDir);
-	console.log(newDoc);
-	if (newDoc['$set']) newDoc['$set'].src = picsDir + "/" + newDoc['$set'].src;
-	console.log(newDoc);
+	if (newDoc['$set']) {
+		if (newDoc['$set'].src) newDoc['$set'].src = picsDir + "/" + newDoc['$set'].src;
+		if (newDoc['$set'].thumb) newDoc['$set'].thumb = picsDir + "/" + newDoc['$set'].thumb;
+	}
 	var opts = data.data[2] || {};
 	var _nonce = data._nonce;
 	db.files.update(doc, newDoc, opts, function(err, num) {
@@ -159,7 +159,7 @@ ipc.on('db.files.update', (e, data) => {
 	});
 });
 ipc.on('db.folders.insert', (e, data) => {
-	console.log('db.folders.insert:');
+	console.log('db.folders.insert');
 	var doc = data.data;
 	var _nonce = data._nonce;
 	db.folders.insert(doc, function(err, newDoc) {
@@ -170,10 +170,32 @@ ipc.on('db.folders.insert', (e, data) => {
 	});
 });
 ipc.on('db.folders.find', (e, data) => {
-	console.log('db.folders.find:');
+	console.log('db.folders.find');
 	var doc = data.data;
 	var _nonce = data._nonce;
 	db.folders.find(doc).sort({title: 1}).skip(data.offset || 0).limit(data.limit || 50).exec(function(err, docs) {
+		e.sender.send('result', {
+			_nonce: _nonce,
+			data: docs
+		});
+	});
+});
+ipc.on('db.tags.insert', (e, data) => {
+	console.log('db.tags.insert');
+	var doc = data.data;
+	var _nonce = data._nonce;
+	db.tags.insert(doc, function(err, newDoc) {
+		e.sender.send('result', {
+			_nonce: _nonce,
+			data: newDoc
+		});
+	});
+});
+ipc.on('db.tags.find', (e, data) => {
+	console.log('db.tags.find');
+	var doc = data.data;
+	var _nonce = data._nonce;
+	db.tags.find(doc).sort({title: 1}).skip(data.offset || 0).limit(data.limit || 50).exec(function(err, docs) {
 		e.sender.send('result', {
 			_nonce: _nonce,
 			data: docs
@@ -185,8 +207,15 @@ ipc.on('files.push', (e, data) => {
 	var picsDir = app.getPath('pictures').replace(/\\/g, '/') + '/.gale_storage';
 	var path = picsDir + "/" + data.data.path;
 	var dirPath = path.substring(0, path.lastIndexOf('/'));
+	var fName = path.substring(path.lastIndexOf('/') + 1, path.lastIndexOf('.'));
+	var fExt = path.substr(path.lastIndexOf('.') + 1);
 	var _nonce = data._nonce;
 	var cbc = false;
+	var clvnopts = {
+		input: src,
+		output: dirPath + "/" + fName + "_thumb." + fExt,
+		size: [300, 300]
+	}
 	mkdirp(dirPath, function(err) {
 		var rd = fs.createReadStream(src);
 		rd.on('error', err => {
@@ -197,7 +226,14 @@ ipc.on('files.push', (e, data) => {
 			resp(err, true);
 		})
 		wr.on('close', m => {
-			resp(path, false);
+			// https://www.npmjs.com/package/clevernails
+			// or http://sharp.dimens.io/en/stable/
+			clevernails.process(clvnopts, function(err, res) {
+				if (err) {throw err;}
+				else {
+					resp(path, false);
+				}
+			});
 		});
 		rd.pipe(wr);
 	})
