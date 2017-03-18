@@ -8,6 +8,8 @@ import Creator from './Creator.jsx';
 import Dragover from './Dragover.jsx';
 import Modal from './Modal.jsx';
 import SubmitCancel from '../components/SubmitCancel.jsx';
+import TagsInput from 'react-tagsinput'
+import Autosuggest from 'react-autosuggest';
 import electron from 'electron';
 
 const ipc = electron.ipcRenderer;
@@ -29,6 +31,7 @@ export default class Viewport extends React.Component {
 			activeFolderID: '', // ALL
 			folders: [],
 			tags: [],
+			searchTags: [],
 			itemsPerPage: 40,
 			currentOffset: 0,
 			isUploading: null
@@ -41,13 +44,16 @@ export default class Viewport extends React.Component {
 			offset: 0,
 			limit: 30,
 			success: function(data) {
-				this.setState({
-					folders: data,
-					activeFolder: 0,
-					activeFolderID: data[0]._id
-				}, () => {
-					this.openFolder(0, data[0]._id);
-				});
+				console.log(data);
+				if (data.length) {
+					this.setState({
+						folders: data,
+						activeFolder: 0,
+						activeFolderID: data[0]._id
+					}, () => {
+						this.openFolder(0, data[0]._id);
+					});
+				}
 			}.bind(this),
 			error: function(data) {
 				console.error(data)
@@ -103,7 +109,7 @@ export default class Viewport extends React.Component {
 			modalContent: {
 				header: 'Enter a name for the new folder:',
 				content: <input placeholder="Folder name" className="input-plain" type="text" onChange={this.updateModalValue.bind(this)} />,
-				footer: <SubmitCancel submit={this.addFolder.bind(this)} cancel={this.closeFolderModal.bind(this)} />
+				footer: <SubmitCancel submit={this.addFolder.bind(this)} cancel={this.closeModal.bind(this)} />
 			}
 		})
 	}
@@ -114,7 +120,7 @@ export default class Viewport extends React.Component {
 	    	// ffs state y u no update value for input
 	    });
 	}
-	closeFolderModal() {
+	closeModal() {
 		this.setState({
 			modalContent: null,
 			modalValue: ''
@@ -142,9 +148,9 @@ export default class Viewport extends React.Component {
 			})
 
 		}
-		this.closeFolderModal();
+		this.closeModal();
 	}
-	openFolder(index, id, cb) {
+	openFolder(index, id, cb, tags) {
 		var changed = false;
 		console.log("opening folder: " + (index == null ? this.state.activeFolder : index) + " " + (id || this.state.activeFolderID));
 		if (index != this.state.activeFolder) changed = true;
@@ -159,10 +165,30 @@ export default class Viewport extends React.Component {
 			activeFolder: (index == null ? this.state.activeFolder : index),
 			activeFolderID: id || this.state.activeFolderID
 		}, () => {
-			var data = {
-				parent: id || this.state.activeFolderID
-			};
-			if (this.state.activeFolder == -1) data = {};
+			var data = {};
+			if (this.state.activeFolder != -1) {
+				data = {
+					parent: id || this.state.activeFolderID
+				};
+			}
+			if (tags) {
+				if (data.parent) {
+					data = {
+						$and: {
+							parent: id || this.state.activeFolderID,
+							tags: {$elemMatch: {
+								$in: tags
+							}}
+						}
+					}
+				} else { // mess
+					data = {
+						tags: {$elemMatch: {
+							$in: tags
+						}}
+					}
+				}
+			}
 			ajax({
 				channel: 'db.files.find',
 				data: data,
@@ -222,7 +248,8 @@ export default class Viewport extends React.Component {
 			channel: 'db.tags.insert',
 			data: {
 				title: tag,
-				folder: this.state.activeFolderID
+				folder: this.state.activeFolderID,
+				shortcut: null
 			},
 			success: function(data) {
 				tags.push(data);
@@ -243,9 +270,12 @@ export default class Viewport extends React.Component {
 		}
 		return false;
 	}
-	uploadFile(file) {
-		console.log(file);
+	uploadFile(file, cb) {
 		var rem = this.state.creatorItem;
+		console.log(file);
+		console.log("remaining:");
+		console.log(rem);
+		if (rem.length == 0) return;
 		rem.shift();
 		this.setState({
 			isUploading: true
@@ -253,7 +283,7 @@ export default class Viewport extends React.Component {
 		file.tags.forEach(tag => {
 			if (!this.tagExists(tag)) this.addTag(tag);
 		})
-		if (this.state.creatorAction == 'new') {
+		if (file.id == undefined) {
 			var f = {
 				title: file.title,
 				star: false,
@@ -290,9 +320,12 @@ export default class Viewport extends React.Component {
 								},
 								success: function(data) {
 									// nesting
+									//rem.shift();
 									if (rem.length === 0) {
 										this.closeCreator();
 										this.openFolder();
+									} else {
+										if (cb) cb();
 									}
 									this.setState({
 										creatorItem: rem,
@@ -328,11 +361,13 @@ export default class Viewport extends React.Component {
 					}
 				],
 				success: function(data) {
-					var rem = this.state.creatorItem;
-					rem.shift();
+					//var rem = this.state.creatorItem;
+					//rem.shift();
 					if (rem.length === 0) {
 						this.closeCreator();
 						this.openFolder(this.state.activeFolder, this.state.activeFolderID);
+					} else {
+						if (cb) cb();
 					}
 					this.setState({
 						creatorItem: rem,
@@ -345,8 +380,73 @@ export default class Viewport extends React.Component {
 					console.error(data)
 				}.bind(this)
 			});
-
 		}
+	}
+	removeFile(file, index) {
+		file = file[0];
+		console.log(file);
+		ajax({
+			channel: 'db.files.remove',
+			data: {_id: file._id},
+			success: function(data) {
+				ajax({
+					channel: 'files.delete',
+					data: {
+						src: file.src,
+					},
+					success: function(data) {
+						var files = this.state.files;
+						if (this.state.lightboxIndex != null) {
+							files.splice(this.state.lightboxIndex, 1);
+							if (files.length == 0) {
+								this.setState({
+									lightboxIndex: null,
+									files: []
+								})
+								return;
+							}
+							if (this.state.files.length <= this.state.lightboxIndex) this.changeLightboxPage(-1);
+							this.setState({
+								files: files
+							}, () => {
+								this.changeLightboxPage(0);
+							})
+						} else {
+							// reload files
+						}
+						console.log("removed");
+					}.bind(this),
+					error: function(data) {
+						console.error(data)
+					}.bind(this)
+				});
+			}.bind(this),
+			error: function(data) {
+				console.error(data)
+			}.bind(this)
+		});
+	}
+	starFile(file) {
+		file = file[0];
+		var star = !file.star;
+		ajax({
+			channel: 'db.files.update',
+			data: [
+				{
+					_id: file._id
+				},
+				{'$set': {
+					star: star
+				}}
+			],
+			success: function(data) {
+				this.openFolder(this.state.activeFolder, this.state.activeFolderID);
+				console.log("starred");
+			}.bind(this),
+			error: function(data) {
+				console.error(data)
+			}.bind(this)
+		});
 	}
 	render() {
 		var footerButtons = [
@@ -368,12 +468,14 @@ export default class Viewport extends React.Component {
 				<WindowFrame window={this.props.window} title={(this.state.activeFolder == -1 ? 'Gale' : (this.state.folders[this.state.activeFolder] || {}).title || 'Gale')} />
 				<main className="viewport">
 					<Dragover />
-					<Modal content={this.state.modalContent} close={this.closeFolderModal.bind(this)} />
+					<Modal content={this.state.modalContent} close={this.closeModal.bind(this)} />
 					<Lightbox index={this.state.lightboxIndex}
 							  items={this.state.files}
 							  close={this.closeLightbox.bind(this)}
 							  editFile={this.openCreator.bind(this)}
-							  deleteFile={null}
+							  deleteFile={this.removeFile.bind(this)}
+							  starFile={this.starFile.bind(this)}
+							  isOverlaid={!!this.state.creatorItem.length}
 							  pageLeft={() => this.changeLightboxPage.bind(this)(-1)}
 							  pageRight={() => this.changeLightboxPage.bind(this)(1)} />
 					{(!!this.state.creatorItem.length ||
@@ -385,11 +487,19 @@ export default class Viewport extends React.Component {
 							 isUploading={this.state.isUploading} 
 							 tags={this.state.tags}
 							 action={this.state.creatorAction} />}
-					<LeftNav header="Folders" footers={footerButtons} items={this.state.folders} onItemClick={this.openFolder.bind(this)} />
+					<LeftNav header="Folders"
+							 footers={footerButtons}
+							 items={this.state.folders}
+							 onItemClick={this.openFolder.bind(this)}
+							 index={this.state.activeFolder} />
 					<Gallery files={this.state.files}
 							 onItemClick={this.openLightbox.bind(this)}
 							 loadMoreContent={this.openFolder.bind(this)}
-							 viewMode={this.state.viewMode} />
+							 viewMode={this.state.viewMode}
+							 editFile={this.openCreator.bind(this)}
+							 deleteFile={this.removeFile.bind(this)}
+							 starFile={this.starFile.bind(this)}
+							 isOverlaid={!!this.state.lightboxIndex?true:null} />
 				</main>
 			</div>
 		);

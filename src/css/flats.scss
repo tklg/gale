@@ -122,20 +122,23 @@ body * {
 .btn-stacked + .btn-stacked {
 	margin: 0;
 }
-.btn:hover {
+.btn:hover,
+.btn:focus {
 	box-shadow: 0 0 4px rgba(0,0,0,.14),0 4px 8px rgba(0,0,0,.28);
 	background: $accent-4;
 }
 .btn-success {
 	background: $theme-success;
 }
-.btn-success:hover {
+.btn-success:hover,
+.btn-success:focus {
 	background: $theme-success-darker;
 }
 .btn-error {
 	background: $theme-error;
 }
-.btn-error:hover {
+.btn-error:hover,
+.btn-error:focus {
 	background: $theme-error-darker;
 }
 .btn-icon {
@@ -333,23 +336,30 @@ body * {
 			}
 		}
 		.list {
-			margin: 0;
-			padding: 0;
+			// margin: 0;
+			// padding: 0;
 			user-select: none;
 			list-style: none;
 			flex: 1;
+
+			> div {
+				width: 260px;
+			}
 		}
 		li {
 			text-decoration: none;
 			padding: 0 20px;
+			width: calc(100% - 40px);
 			line-height: 40px;
 			height: 39px;
+			cursor: default;
 			border-bottom: $border-0;
 			@include ellipsis();
 			transition: background .2s $transition-smooth,
 						color .2s $transition-smooth;
 		}
-		li:hover {
+		li:hover,
+		li[data-active] {
 			background: $white-05;
 		}
 		li:last-of-type {
@@ -403,6 +413,7 @@ body * {
 		}
 		.tags {
 			flex: 1;
+			margin-right: 10px;
 			// text-align: center;
 			@include ellipsis();
 		}
@@ -474,15 +485,19 @@ body * {
 	flex: 1;
 	height: 100%;
 	font-size: 0;
+	overflow-y: auto !important;
 
+	> div {
+		width: 100%;
+	}
 	.gallery-row {
 		display: flex;
 		height: 240px;
 		width: 100%;
-		padding: 10px;
+		padding: 10px 5px 10px 5px;
 	}
 	.gallery-row + .gallery-row {
-		padding: 0 10px 10px 10px;
+		padding: 0 5px 10px 5px;
 	}
 	.gallery-panel {
 		position: relative;
@@ -491,10 +506,14 @@ body * {
 		user-select: none;
 		flex: 1;
 	}
+	.gallery-panel[data-selected] {
+		outline: 2px solid $theme-3;
+		// border-radius: 3px;
+	}
 	.grid {
 		height: 240px;
-		width: calc(100% - 20px);
-		margin: 0 10px 0 0;
+		width: calc(100% - 10px);
+		// margin: 0 10px 0 0;
 		position: relative;
 
 		.gallery-panel {
@@ -503,6 +522,13 @@ body * {
 		}
 		.gallery-panel:last-of-type {
 			margin: 0;
+		}
+		.gallery-panel:hover .panel-overlay,
+		.gallery-panel[data-selected] .panel-overlay {
+			background: rgba(0,0,0,.5);
+			width: 100%;
+			height: 100%;
+			position: absolute;
 		}
 		h1 {
 			position: absolute;
@@ -518,7 +544,7 @@ body * {
 			@include ellipsis();
 		}
 		.gallery-panel:hover h1 {
-			background: rgba(0,0,0,.5);
+			// background: rgba(0,0,0,.5);
 		}
 		img {
 			height: 100%;
@@ -543,7 +569,8 @@ body * {
 		}
 	}
 	.gallery-panel:hover .tags,
-	.gallery-panel:hover h1 {
+	.gallery-panel:hover h1,
+	.gallery-panel[data-selected] h1 {
 		opacity: 1;
 	}
 	.gallery-panel.placeholder {
@@ -606,7 +633,7 @@ body * {
    	display: flex;
     background: $white-05;
 	margin: 0;	
-	padding: 0 3px;	    	
+	padding: 0 3px;	
 }
 .react-tagsinput--focused {
     background: $white-1;
@@ -739,15 +766,22 @@ input.input-plain:focus {
 			background: $background-light;
 			position: relative;
 			border-top: 1px solid $white-05;
+			width: 100%;
 
 			.input-row {
 				height: 40px;
 				line-height: 40px;
 				display: flex;
 				padding: 0 10px;
+				width: calc(100% - 20px);
+				position: relative;
 
 				label {
 					margin-right: 10px;
+				}
+				input {
+					overflow: hidden;
+					max-width: calc(100% - 20px);
 				}
 			}
 			.react-autosuggest__suggestions-container {

@@ -13,10 +13,10 @@ export default class LeftNav extends React.Component {
 	}
 	componentDidMount() {
 		this.updateWindowDimensions();
-		window.addEventListener('resize', this.updateWindowDimensions.bind(this));
+		window.addEventListener('resize', this.updateWindowDimensions);
 	}
 	componentWillUnmount() {
-		window.removeEventListener('resize', this.updateWindowDimensions.bind(this));
+		window.removeEventListener('resize', this.updateWindowDimensions);
 	}
 	updateWindowDimensions() {
 		this.setState({
@@ -35,7 +35,7 @@ export default class LeftNav extends React.Component {
 						  ref="container">
 					{
 						this.props.items.map((x, i) => {
-							return <ListItem key={i} onClick={() => this.props.onItemClick(i, x._id)}>{x.title}</ListItem>
+							return <ListItem key={i} active={this.props.index == i?"true":null} onClick={() => this.props.onItemClick(i, x._id)}>{x.title}</ListItem>
 						})
 					}
 				</Infinite>

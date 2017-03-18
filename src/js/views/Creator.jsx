@@ -16,7 +16,7 @@ export default class Creator extends React.Component {
 		];
 		return (
 			<section className="creator" data-active={true || (this.props.items && this.props.items.length) || null}>
-				 <LeftNav header="Upload queue" footers={footerButtons} items={this.props.items} />
+				 <LeftNav header={this.props.action == 'new' ? 'Upload queue' : 'Editing queue'} footers={footerButtons} items={this.props.items} />
 				 <ImageEditor close={this.props.close}
 				 			  submit={this.props.submit}
 				 			  items={this.props.items}

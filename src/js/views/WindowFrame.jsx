@@ -30,7 +30,7 @@ export default class WindowFrame extends React.Component {
 				}
 				<div className="nav-placeholder"></div>
 				<h1 className="folder-name">{this.props.title}</h1>
-				<Search/>
+				{false && <Search/>}
 			</header>
 		);
 	}

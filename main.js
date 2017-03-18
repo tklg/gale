@@ -1,13 +1,16 @@
 const electron = require('electron');
 const Datastore = require('nedb');
-const fs = require('fs');
-const mkdirp = require('mkdirp');
+const fs = require('fs-extra');
+//const mkdirp = require('mkdirp');
 const clevernails = require('clevernails');
+const sharp = require('sharp');
 // Module to control application life.
 const app = electron.app;
 const ipc = electron.ipcMain;
 // Module to create native browser window.
 const BrowserWindow = electron.BrowserWindow;
+const {requireTaskPool} = require('electron-remote');
+const copy = requireTaskPool(require.resolve('./copyfile'));
 
 // Keep a global reference of the window object, if you don't, the window will
 // be closed automatically when the JavaScript object is garbage collected.
@@ -158,6 +161,18 @@ ipc.on('db.files.update', (e, data) => {
 		});
 	});
 });
+ipc.on('db.files.remove', (e, data) => {
+	console.log('db.files.remove');
+	var doc = data.data;
+	var opts = data.opts || {};
+	var _nonce = data._nonce;
+	db.files.remove(doc, opts, function(err, num) {
+		e.sender.send('result', {
+			_nonce: _nonce,
+			data: num
+		});
+	});
+});
 ipc.on('db.folders.insert', (e, data) => {
 	console.log('db.folders.insert');
 	var doc = data.data;
@@ -177,6 +192,18 @@ ipc.on('db.folders.find', (e, data) => {
 		e.sender.send('result', {
 			_nonce: _nonce,
 			data: docs
+		});
+	});
+});
+ipc.on('db.folders.remove', (e, data) => {
+	console.log('db.folders.remove');
+	var doc = data.data;
+	var opts = data.opts || {};
+	var _nonce = data._nonce;
+	db.folders.remove(doc, opts, function(err, num) {
+		e.sender.send('result', {
+			_nonce: _nonce,
+			data: num
 		});
 	});
 });
@@ -202,7 +229,9 @@ ipc.on('db.tags.find', (e, data) => {
 		});
 	});
 });
+
 ipc.on('files.push', (e, data) => {
+	console.log('files.push');
 	var src = data.data.src;
 	var picsDir = app.getPath('pictures').replace(/\\/g, '/') + '/.gale_storage';
 	var path = picsDir + "/" + data.data.path;
@@ -211,31 +240,36 @@ ipc.on('files.push', (e, data) => {
 	var fExt = path.substr(path.lastIndexOf('.') + 1);
 	var _nonce = data._nonce;
 	var cbc = false;
+	//var output = dirPath + "/" + fName + "_thumb." + fExt;
 	var clvnopts = {
 		input: src,
 		output: dirPath + "/" + fName + "_thumb." + fExt,
 		size: [300, 300]
 	}
-	mkdirp(dirPath, function(err) {
-		var rd = fs.createReadStream(src);
-		rd.on('error', err => {
-			resp(err, true)
-		});
-		var wr = fs.createWriteStream(path);
-		wr.on('error', err => {
-			resp(err, true);
-		})
-		wr.on('close', m => {
-			// https://www.npmjs.com/package/clevernails
-			// or http://sharp.dimens.io/en/stable/
-			clevernails.process(clvnopts, function(err, res) {
-				if (err) {throw err;}
-				else {
-					resp(path, false);
-				}
+	fs.mkdirp(dirPath, function(err) {
+		console.log("start");
+		copy(src, path, clvnopts, dirPath, fName, fExt)
+			.then(res => {
+				console.log("done");
+				console.log(res);
+				resp(res, false)
 			});
-		});
-		rd.pipe(wr);
+		/*fs.copy(src, path, err => {
+			if (err) resp(err, true);
+			else {
+				clevernails.process(clvnopts, function(err, res) {
+				if (err) {
+					//var output = dirPath + "/" + fName + "_thumb." + fExt;
+					sharp(src)
+						 .resize(300, 300)
+						 .toFile(clvnopts.output, err => {
+						 	resp(clvnopts.output, false)
+						 });
+				}
+				else resp(path, false);
+			});
+			}
+		})*/
 	})
 	function resp(err, isErr) {
 		if (!cbc) {
@@ -253,4 +287,26 @@ ipc.on('files.push', (e, data) => {
 			cbc = true;
 		}
 	}
+});
+ipc.on('files.delete', (e, data) => {
+	console.log('files.delete');
+	var _nonce = data._nonce;
+	var src = data.data.src;
+	var fExt = src.substr(src.lastIndexOf('.') + 1);
+	var thumb = src.substring(0, src.lastIndexOf('.')) + '_thumb.' + fExt;
+	fs.unlink(src, (err) => {
+		if (err) {
+			e.sender.send('result', {
+				_nonce: _nonce,
+				data: err
+			});
+			return;
+		}
+		fs.unlink(thumb, (err) => {
+			e.sender.send('result', {
+				_nonce: _nonce,
+				data: err
+			});
+		})
+	})
 });
