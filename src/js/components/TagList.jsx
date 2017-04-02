@@ -6,7 +6,7 @@ export default class TagList extends React.Component {
 			<div className="tags" title={this.props.tags.toString()}>
 				{
 					this.props.tags.map((x, i) => {
-						return <span key={i} className="tag">{x}</span>
+						return <span key={x._id} className="tag">{x.title}</span>
 					})
 				}
 			</div>

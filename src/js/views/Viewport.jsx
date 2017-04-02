@@ -32,10 +32,12 @@ export default class Viewport extends React.Component {
 			folders: [],
 			tags: [],
 			searchTags: [],
+			searchActive: null,
 			itemsPerPage: 40,
 			currentOffset: 0,
 			isUploading: null
 		}
+		this.handleKeyPress = this.handleKeyPress.bind(this);
 	}
 	componentDidMount() {
 		ajax({
@@ -73,6 +75,27 @@ export default class Viewport extends React.Component {
 				console.error(data)
 			}.bind(this)
 		});
+		window.addEventListener('keyup', this.handleKeyPress);
+	}
+	componentWillUnmount() {
+		window.removeEventListener('keyup', this.handleKeyPress);
+	}
+	handleKeyPress(e) {
+		if (!this.state.searchActive) return;
+		e.stopPropagation();
+		console.log("[Viewport]: handling keypress " +e.which+ " ("+ e.key + ")");
+		switch (e.key) {
+			case 'Enter':
+				this.setState({
+					currentOffset: 0
+				}, () => {
+					this.openFolder();
+				})
+				break;
+			case 'Escape':
+				
+				break;
+		}
 	}
 	openLightbox(index) {
 		this.setState({
@@ -150,12 +173,13 @@ export default class Viewport extends React.Component {
 		}
 		this.closeModal();
 	}
-	openFolder(index, id, cb, tags) {
+	openFolder(index, id, cb, force) {
 		var changed = false;
+		var tags = this.state.searchTags;
 		console.log("opening folder: " + (index == null ? this.state.activeFolder : index) + " " + (id || this.state.activeFolderID));
-		if (index != this.state.activeFolder) changed = true;
+		if (index != this.state.activeFolder || force) changed = true;
 		var cur = this.state.files;
-		if (index == -1 || (index != null && !!id)) {
+		if (index == -1 || (index != null && !!id) || changed) {
 			cur = [];
 			this.setState({
 				currentOffset: 0
@@ -171,31 +195,32 @@ export default class Viewport extends React.Component {
 					parent: id || this.state.activeFolderID
 				};
 			}
-			if (tags) {
+			if (tags.length) {
+				console.log(tags);
 				if (data.parent) {
 					data = {
-						$and: {
-							parent: id || this.state.activeFolderID,
-							tags: {$elemMatch: {
-								$in: tags
-							}}
-						}
+						$and: [
+							{parent: id || this.state.activeFolderID},
+							{tags: {$in: tags}}
+						]
 					}
 				} else { // mess
 					data = {
-						tags: {$elemMatch: {
-							$in: tags
-						}}
+						//$elemMatch: {
+							tags: {$in: tags}
+						//}
 					}
 				}
 			}
+			console.log(data);
 			ajax({
 				channel: 'db.files.find',
 				data: data,
 				offset: this.state.currentOffset,
 				limit: this.state.itemsPerPage,
 				success: function(data) {
-					if (data.length || changed) {
+					console.log(data);
+					if ((data && data.length) || changed) {
 						cur = cur.concat(data);
 						var newOffset = this.state.currentOffset + data.length
 						this.setState({
@@ -448,6 +473,12 @@ export default class Viewport extends React.Component {
 			}.bind(this)
 		});
 	}
+	handleSearchInput(tags) {
+		 this.setState({
+	    	searchTags: tags,
+	    	searchActive: tags.length ? (!!tags || null) : null
+	    })
+	}
 	render() {
 		var footerButtons = [
 			{
@@ -465,7 +496,12 @@ export default class Viewport extends React.Component {
 		];
 		return (
 			<div>
-				<WindowFrame window={this.props.window} title={(this.state.activeFolder == -1 ? 'Gale' : (this.state.folders[this.state.activeFolder] || {}).title || 'Gale')} />
+				<WindowFrame window={this.props.window}
+							 title={(this.state.activeFolder == -1 ? 'Gale' : (this.state.folders[this.state.activeFolder] || {}).title || 'Gale')}
+							 searchTags={this.state.searchTags}
+							 searchActive={this.state.searchActive}
+							 handleSearchInput={this.handleSearchInput.bind(this)}
+							 tags={this.state.tags} />
 				<main className="viewport">
 					<Dragover />
 					<Modal content={this.state.modalContent} close={this.closeModal.bind(this)} />
@@ -475,6 +511,7 @@ export default class Viewport extends React.Component {
 							  editFile={this.openCreator.bind(this)}
 							  deleteFile={this.removeFile.bind(this)}
 							  starFile={this.starFile.bind(this)}
+							  tags={this.state.tags}
 							  isOverlaid={!!this.state.creatorItem.length}
 							  pageLeft={() => this.changeLightboxPage.bind(this)(-1)}
 							  pageRight={() => this.changeLightboxPage.bind(this)(1)} />
@@ -499,7 +536,7 @@ export default class Viewport extends React.Component {
 							 editFile={this.openCreator.bind(this)}
 							 deleteFile={this.removeFile.bind(this)}
 							 starFile={this.starFile.bind(this)}
-							 isOverlaid={!!this.state.lightboxIndex?true:null} />
+							 isOverlaid={(!!this.state.lightboxIndex || !!this.state.searchActive)?true:null} />
 				</main>
 			</div>
 		);
@@ -576,7 +613,7 @@ const ajax = opts => {
 		ipc.send(opts.channel, {
 			_nonce: _nonce,
 			data: opts.data,
-			offset: opts.offset,
+			offset: 0,//opts.offset,
 			limit: opts.limit
 		});
 	}

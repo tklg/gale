@@ -261,7 +261,7 @@ export default class Gallery extends React.Component {
 									{
 										x.map((y, j) => {
 											if (y.placeholder) return <GalleryPanel key={i * itemsPerRow + j} viewMode={this.props.viewMode} isPlaceholder />
-											return <GalleryPanel key={i * itemsPerRow + j} 
+											return <GalleryPanel key={y._id} 
 																 selected={this.state.selectionIndex.indexOf(i * itemsPerRow + j) > -1}
 																 onClick={() => this.onClick(i * itemsPerRow + j)}
 																 flexMode={x.length}
@@ -284,7 +284,7 @@ export default class Gallery extends React.Component {
 						  
 						  isInfiniteLoading={this.state.isInfiniteLoading} >
 					{
-						this.props.files.map((x, i) => <div key={i} className={"gallery-row "+this.props.viewMode}><GalleryPanel selected={this.state.selectionIndex.indexOf(i) > -1} onClick={() => this.onClick(i)} flexMode="no-flex" title={x.title} tags={x.tags}>{x.thumb}</GalleryPanel></div>)
+						this.props.files.map((x, i) => <div key={x._id} className={"gallery-row "+this.props.viewMode}><GalleryPanel selected={this.state.selectionIndex.indexOf(i) > -1} onClick={() => this.onClick(i)} flexMode="no-flex" title={x.title} tags={x.tags}>{x.thumb}</GalleryPanel></div>)
 					}
 				</Infinite>
 			);

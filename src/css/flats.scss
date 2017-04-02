@@ -251,7 +251,30 @@ body * {
     		color: $color-hint;
     		pointer-events: none;
     	}
-    	input {
+    	.react-tagsinput {
+    		margin: 17px 0;
+    		// padding-left: 30px;
+    		width: 200px;
+    		transition: .15s background $transition-smooth,
+    					.25s width $transition-smooth;
+    	}
+    	.react-tagsinput--focused {
+    		width: 300px;
+    	}
+    	.react-tagsinput > span {
+    		padding: 0 0 0 30px;
+    		width: calc(100% - 30px);
+    	}
+    	.react-tagsinput-tag {
+    		padding-right: 20px;
+    		position: relative;
+    	}
+    	.react-tagsinput-tag .react-tagsinput-remove {
+    		position: absolute;
+    		right: 4px;
+    		top: 0;
+    	}
+    	/* input {
     		background: $white-05;
     		border: none;
     		height: 26px;
@@ -267,7 +290,7 @@ body * {
     	input:focus {
     		background: $white-05;
     		width: 300px;
-    	}
+    	} */
     }
     .search-container[data-active] {
     	.mdi {
@@ -275,10 +298,13 @@ body * {
     		pointer-events: all;
     		cursor: pointer;
     	}
-    	input {
-    		background: $white-05;
+    	.react-tagsinput {
     		width: 300px;
     	}
+    	/* input {
+    		background: $white-05;
+    		width: 300px;
+    	} */
     }
     .electron-windowframe ~ .search-container {
     	margin-right: 260px;

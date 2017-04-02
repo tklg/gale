@@ -66,7 +66,7 @@ export default class Lightbox extends React.Component {
 					 data-active>
 					<nav className="header" onClick={(e) => e.stopPropagation()}>
 						<h1>{this.props.items[this.props.index].title}</h1>
-						<TagList tags={this.props.items[this.props.index].tags} />
+						<TagList tags={this.props.items[this.props.index].tags.map(x => this.props.tags.find(y => y.title === x))} />
 						<button className="btn-icon btn-error" id="btn-delete" onClick={() => this.remove([this.props.items[this.props.index]])}><Icon>delete</Icon></button>
 						<button className="btn-icon" id="btn-edit" onClick={() => this.edit.bind(this)([this.props.items[this.props.index]])}><Icon>pencil</Icon></button>
 						<button className="btn-icon" id="btn-close" onClick={this.close.bind(this)}><Icon>window-close</Icon></button>
