@@ -13,7 +13,7 @@ gulp.task('default', ['build']);
 gulp.task('build', ['js', 'html', 'css', 'watch']);
 
 gulp.task('js', function() {
-    gulp.src(['src/js/*.js*'])
+    gulp.src(['src/js/main.jsx'])
         .pipe(webpack(require('./webpack.config.js')))
         //.pipe(concat('bundle.js'))
         .pipe(minify({

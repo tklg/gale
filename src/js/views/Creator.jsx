@@ -12,6 +12,10 @@ export default class Creator extends React.Component {
 			{
 				content: 'Add more',
 				onClick: this.props.onFooterClick
+			},
+			{
+				content: 'Process all',
+				onClick: this.props.onProcessAll
 			}
 		];
 		return (

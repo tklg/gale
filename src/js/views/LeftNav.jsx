@@ -35,7 +35,7 @@ export default class LeftNav extends React.Component {
 						  ref="container">
 					{
 						this.props.items.map((x, i) => {
-							return <ListItem key={x._id} active={this.props.index == i?"true":null} onClick={() => this.props.onItemClick(i, x._id)}>{x.title}</ListItem>
+							return <ListItem key={x._id || i} active={this.props.index == i?"true":null} onClick={() => this.props.onItemClick(i, x._id)}>{x.title}</ListItem>
 						})
 					}
 				</Infinite>

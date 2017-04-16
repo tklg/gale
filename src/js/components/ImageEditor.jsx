@@ -16,20 +16,21 @@ export default class ImageEditor extends React.Component {
 		console.log(this.props.items);
 		this.setState({
 			title: this.props.items[0].title,
-			tags: this.props.items[0].tags ? this.props.items[0].tags : []
+			tags: this.props.items[0].tags ? this.props.items[0].tags : this.getPossibleTags(this.props.items[0])
 		})
-		if (this.props.items[0].title.includes(',')) {
-			var possible = this.props.items[0].title.substring(0, this.props.items[0].title.lastIndexOf('.'));
-			this.setState({
-				tags: possible.split(',').map(x => x.trim())
-			})
-		}
 		setTimeout(() => {
 			this.setState({
 				disabled: null
 			})
 			this.refs.item_name.focus();
 		}, 500);
+	}
+	componentWillReceiveProps(newProps) {
+		if (newProps.items.length == 0) return;
+		this.setState({
+			title: newProps.items[0].title,
+			tags: newProps.items[0].tags ? newProps.items[0].tags : this.getPossibleTags(newProps.items[0])
+		})
 	}
 	handleChange(tags) {
 	    this.setState({tags})
@@ -39,6 +40,27 @@ export default class ImageEditor extends React.Component {
 			title: e.target.value
 		})
 	}
+	getFileObject() {
+		var file = {
+			id: (this.props.items[0] || {})._id,
+			title: this.state.title,
+			localSrc: (this.props.items[0] || {}).src || '',
+			tags: this.state.tags
+		};
+		return file;
+	}
+	getPossibleTags(file) {
+		if (file.title.includes(',')) {
+			var possible = file.title.substring(0, file.title.lastIndexOf('.'));
+			return possible.split(',').map(x => x.trim());
+		}
+		return [];
+	}
+	/*submitAll() {
+		var rem = this.props.items;
+		if (rem.length == 0) return;
+		submitFile(getFileObject());
+	}*/
 	submitFile(file) {
 		this.props.submit(file, () => {
 			this.setState({
@@ -83,12 +105,7 @@ export default class ImageEditor extends React.Component {
 		// https://github.com/olahol/react-tagsinput#demo
 		// https://github.com/moroshko/react-autosuggest
 
-		var file = {
-			id: (this.props.items[0] || {})._id,
-			title: this.state.title,
-			localSrc: (this.props.items[0] || {}).src || '',
-			tags: this.state.tags
-		};
+		var file = this.getFileObject.bind(this)();
 		return (
 			<section className="editor">
 				<div className="preview">

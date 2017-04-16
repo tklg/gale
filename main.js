@@ -135,11 +135,11 @@ ipc.on('db.files.insert', (e, data) => {
 ipc.on('db.files.find', (e, data) => {
 	console.log('db.files.find');
 	var doc = data.data;
-	console.log(doc);
+	//console.log(doc);
 	//console.log(((doc.$elemMatch || {}).tags || {}).$in);
 	var _nonce = data._nonce;
 	db.files.find(doc).sort({date: 1}).skip(data.offset || 0).limit(data.limit || 50).exec(function(err, docs) {
-		console.log(docs);
+		//console.log(docs);
 		e.sender.send('result', {
 			_nonce: _nonce,
 			data: docs

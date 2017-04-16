@@ -78,7 +78,7 @@ export default class Gallery extends React.Component {
 					this.props.editFile(sels, true);
 				}
 				break;
-			case 's':
+			case 'q':
 				if (this.state.selectionIndex[0] != -1) {
 					var sels = this.props.files.filter((x, i) => this.state.selectionIndex.includes(i));
 					this.props.starFile(sels);
@@ -91,6 +91,7 @@ export default class Gallery extends React.Component {
 				}
 				break;
 			case 'ArrowLeft':
+			case 'a':
 				var sels = this.state.selectionIndex;
 				if (sels.length == 1) {
 					this.setState({
@@ -112,6 +113,7 @@ export default class Gallery extends React.Component {
 				})
 				break;
 			case 'ArrowRight':
+			case 'd':
 				var sels = this.state.selectionIndex;
 				if (sels.length == 1) {
 					this.setState({
@@ -133,6 +135,7 @@ export default class Gallery extends React.Component {
 				})
 				break;
 			case 'ArrowUp':
+			case 'w':
 				var sels = this.state.selectionIndex;
 				if (sels.length == 1) {
 					this.setState({
@@ -158,6 +161,7 @@ export default class Gallery extends React.Component {
 				})
 				break;
 			case 'ArrowDown':
+			case 's':
 				var sels = this.state.selectionIndex;
 				if (sels.length == 1) {
 					this.setState({

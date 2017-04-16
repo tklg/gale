@@ -176,9 +176,14 @@ export default class Viewport extends React.Component {
 	openFolder(index, id, cb, force) {
 		var changed = false;
 		var tags = this.state.searchTags;
-		console.log("opening folder: " + (index == null ? this.state.activeFolder : index) + " " + (id || this.state.activeFolderID));
+		console.log("opening folder: " + (index == null ? this.state.activeFolder : index) + " " + (id || this.state.activeFolderID) + " offset: " + this.state.currentOffset);
+		if (index == null) index = this.state.activeFolder;
 		if (index != this.state.activeFolder || force) changed = true;
 		var cur = this.state.files;
+		console.log(index);
+		console.log(this.state.activeFolder);
+		console.log(force);
+		
 		if (index == -1 || (index != null && !!id) || changed) {
 			cur = [];
 			this.setState({
@@ -196,7 +201,7 @@ export default class Viewport extends React.Component {
 				};
 			}
 			if (tags.length) {
-				console.log(tags);
+				//console.log(tags);
 				if (data.parent) {
 					data = {
 						$and: [
@@ -289,11 +294,34 @@ export default class Viewport extends React.Component {
 			}.bind(this)
 		})
 	}
+	getPossibleTags(file) {
+		if (file.title.includes(',')) {
+			var possible = file.title.substring(0, file.title.lastIndexOf('.'));
+			return possible.split(',').map(x => x.trim());
+		}
+		return [];
+	}
 	tagExists(tag) {
 		for (var i = 0; i < this.state.tags.length; i++) {
 			if (this.state.tags[i].title == tag) return true;
 		}
 		return false;
+	}
+	uploadAll() {
+		var rem = this.state.creatorItem;
+		if (rem.length == 0) return;
+		var f = rem[0];
+
+		var file = {
+			id: (f || {})._id,
+			title: f.title,
+			localSrc: (f || {}).src || '',
+			tags: this.getPossibleTags(f)
+		};
+
+		var cb = null;
+
+		this.uploadFile(file, this.uploadAll.bind(this));
 	}
 	uploadFile(file, cb) {
 		var rem = this.state.creatorItem;
@@ -520,6 +548,7 @@ export default class Viewport extends React.Component {
 					 <Creator items={this.state.creatorItem} 
 							 close={this.closeCreator.bind(this)}
 							 onFooterClick={() => this.openFileDialog.bind(this)(false)}
+							 onProcessAll={() => this.uploadAll.bind(this)()}
 							 submit={this.uploadFile.bind(this)}
 							 isUploading={this.state.isUploading} 
 							 tags={this.state.tags}
@@ -613,7 +642,7 @@ const ajax = opts => {
 		ipc.send(opts.channel, {
 			_nonce: _nonce,
 			data: opts.data,
-			offset: 0,//opts.offset,
+			offset: opts.offset,
 			limit: opts.limit
 		});
 	}

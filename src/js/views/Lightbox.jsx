@@ -31,9 +31,11 @@ export default class Lightbox extends React.Component {
 				this.remove([this.props.items[this.props.index]])
 				break;
 			case 'ArrowLeft':
+			case 'a':
 				this.pageLeft();
 				break;
 			case 'ArrowRight':
+			case 'd':
 				this.pageRight();
 				break;
 		}
