@@ -180,9 +180,6 @@ export default class Viewport extends React.Component {
 		if (index == null) index = this.state.activeFolder;
 		if (index != this.state.activeFolder || force) changed = true;
 		var cur = this.state.files;
-		console.log(index);
-		console.log(this.state.activeFolder);
-		console.log(force);
 		
 		if (index == -1 || (index != null && !!id) || changed) {
 			cur = [];
@@ -224,7 +221,7 @@ export default class Viewport extends React.Component {
 				offset: this.state.currentOffset,
 				limit: this.state.itemsPerPage,
 				success: function(data) {
-					console.log(data);
+					//console.log(data);
 					if ((data && data.length) || changed) {
 						cur = cur.concat(data);
 						var newOffset = this.state.currentOffset + data.length
